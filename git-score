@@ -112,13 +112,15 @@ def parseGitLogData(stream, include=None, exclude=None):
     if line == '':
       continue  # skip blank lines
 
-    if line.startswith('+'):  # author line, record new commit.
+    # Author line, record new commit.
+    if line.startswith('+'):
       author = line[1:]  # remove leading '+'
       if author not in stats:
         stats[author] = CommitStats(author)
       stats[author].commitNew()
 
-    elif exclude or include:  # file line, record per-file changes.
+    # File line, record per-file changes.
+    elif exclude or include:
       match = file_pattern.match(line)
       if match and author in stats:
         added, removed, filename = match.group(1, 2, 3)
@@ -127,7 +129,8 @@ def parseGitLogData(stream, include=None, exclude=None):
         if include_file and not exclude_file:
           stats[author].commitAddChanges(added, removed)
 
-    else: # summary line, record changes
+    # Summary line, record changes.
+    else:
       match = stat_pattern.match(line)
       if match and author in stats:
         files, added, removed = match.group(1, 2, 3)
