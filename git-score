@@ -6,6 +6,7 @@
 # Author: Matt Sparks
 import re
 import subprocess
+import sys
 
 
 STAT_PATTERN = (r'^\s*(\d+) files changed, (\d+) insertions\(\+\), '
@@ -82,8 +83,13 @@ def parseGitLogData(stream):
 
 def main():
   cmd = ['git', 'log', '--shortstat', '--pretty=format:+%an <%ae>']
+  cmd.extend(sys.argv[1:])
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
   stats = parseGitLogData(proc.stdout)
+
+  if not stats:
+    print 'no commits'
+    sys.exit(0)
 
   # Find length of longest author name.
   max_author_length = max([len(x) for x in stats.keys()])
