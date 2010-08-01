@@ -12,6 +12,8 @@ import sys
 STAT_PATTERN = (r'^\s*(\d+) files changed, (\d+) insertions\(\+\), '
                 r'(\d+) deletions\(\-\)$')
 
+FILE_PATTERN =  r'^\s*(\d+)\t(\d+)\t(.*)$'
+
 # Truncate long author names to this size.
 MAX_NAME_LENGTH = 45
 
@@ -47,8 +49,12 @@ class CommitStats(object):
     '''Returns delta of lines added and removed.'''
     return self._added - self._removed
 
-  def commitNew(self, added, removed):
-    '''Records a new commit.
+  def commitNew(self):
+    '''Records a new commit.'''
+    self._commits += 1
+
+  def commitAddChanges(self, added, removed):
+    '''Records changes. Does not record a new commit.
 
     Args:
       added: number of lines added in this commit
@@ -59,7 +65,7 @@ class CommitStats(object):
     '''
     self._added += int(added)
     self._removed += int(removed)
-    self._commits += 1
+
 
 class GitColor(object):
   '''Gets and uses current git settings to color output.'''
@@ -92,8 +98,10 @@ class GitColor(object):
     return text
 
 
-def parseGitLogData(stream):
-  pattern = re.compile(STAT_PATTERN)
+def parseGitLogData(stream, exclude_re=None):
+  stat_pattern = re.compile(STAT_PATTERN)
+  file_pattern = re.compile(FILE_PATTERN)
+  exclude_pattern = re.compile(exclude_re) if exclude_re else None
   stats = {}
 
   for line in stream:
@@ -101,24 +109,47 @@ def parseGitLogData(stream):
     if line == '':
       continue  # skip blank lines
 
-    if line.startswith('+'):
+    if line.startswith('+'): # author line, record new commit.
       author = line[1:]  # remove leading '+'
       if author not in stats:
         stats[author] = CommitStats(author)
-    else:
-      match = pattern.match(line)
+      stats[author].commitNew()
+
+    elif exclude_pattern: # file line, record per-file changes.
+      match = file_pattern.match(line)
+      if match and author in stats:
+        added, removed, filename = match.group(1, 2, 3)
+        match = exclude_pattern.match(filename)
+        if not match:
+          stats[author].commitAddChanges(added, removed)
+
+    else: # summary line, record changes
+      match = stat_pattern.match(line)
       if match and author in stats:
         files, added, removed = match.group(1, 2, 3)
-        stats[author].commitNew(added, removed)
+        stats[author].commitAddChanges(added, removed)
 
   return stats
 
+def getGitStats(log_args, exclude_re=None):
+  stat = '--shortstat' if not exclude_re else '--numstat'
+  cmd = ['git', 'log', stat, '--pretty=format:+%an <%ae>']
+  cmd.extend(log_args)
+  proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+  return parseGitLogData(proc.stdout, exclude_re=exclude_re)
+
 
 def main():
-  cmd = ['git', 'log', '--shortstat', '--pretty=format:+%an <%ae>']
-  cmd.extend(sys.argv[1:])
-  proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-  stats = parseGitLogData(proc.stdout)
+  exclude_re = None
+  log_args = []
+
+  for arg in sys.argv[1:]: # look at incoming arguments, to see if we need any
+    if arg.startswith("--exclude-re="):
+      exclude_re = r'%s' % arg[len("--exclude-re="):]
+    else:
+      log_args.append(arg)
+
+  stats = getGitStats(log_args, exclude_re=exclude_re)
 
   if not stats:
     print 'no commits'
