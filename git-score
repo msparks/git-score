@@ -136,7 +136,7 @@ def parseGitLogData(stream, include=None, exclude=None):
   return stats
 
 
-def getGitStats(log_args, include=None, exclude=None):
+def gitStats(log_args, include=None, exclude=None):
   stat = '--numstat' if include or exclude else '--shortstat'
   cmd = ['git', 'log', stat, '--pretty=format:+%an <%ae>']
   cmd.extend(log_args)
@@ -157,7 +157,7 @@ def main():
     else:
       log_args.append(arg)
 
-  stats = getGitStats(log_args, include=include, exclude=exclude)
+  stats = gitStats(log_args, include=include, exclude=exclude)
 
   if not stats:
     print 'no commits'
