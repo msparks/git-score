@@ -79,20 +79,21 @@ class GitColor(object):
 
     cmd = ['git', 'config', 'color.ui']
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    next = proc.stdout.next().strip()
+    next = proc.stdout.readline().strip()
+    next = 'auto' if next == '' else next
     cls._colorIsOn = next in ['true', 'always', 'auto']
     return cls._colorIsOn
 
   @classmethod
   def red(cls, text):
-    '''Returns text, in red if color is on'''
+    '''Returns text, in red if color is on.'''
     if cls.gitColorIsOn():
       return "\033[31m%s\033[0m" % text
     return text
 
   @classmethod
   def green(cls, text):
-    '''Returns text, in green if color is on'''
+    '''Returns text, in green if color is on.'''
     if cls.gitColorIsOn():
       return '\033[32m%s\033[0m' % text
     return text
