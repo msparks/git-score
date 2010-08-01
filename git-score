@@ -98,10 +98,12 @@ class GitColor(object):
     return text
 
 
-def parseGitLogData(stream, exclude_re=None):
+def parseGitLogData(stream, include=None, exclude=None):
   stat_pattern = re.compile(STAT_PATTERN)
   file_pattern = re.compile(FILE_PATTERN)
-  exclude_pattern = re.compile(exclude_re) if exclude_re else None
+  exclude_pattern = re.compile(exclude) if exclude else None
+  include_pattern = re.compile(include) if include else None
+
   stats = {}
 
   for line in stream:
@@ -115,12 +117,13 @@ def parseGitLogData(stream, exclude_re=None):
         stats[author] = CommitStats(author)
       stats[author].commitNew()
 
-    elif exclude_pattern: # file line, record per-file changes.
+    elif exclude or include: # file line, record per-file changes.
       match = file_pattern.match(line)
       if match and author in stats:
         added, removed, filename = match.group(1, 2, 3)
-        match = exclude_pattern.match(filename)
-        if not match:
+        exclude_file = exclude and exclude_pattern.match(filename)
+        include_file = not include or include_pattern.match(filename)
+        if include_file and not exclude_file:
           stats[author].commitAddChanges(added, removed)
 
     else: # summary line, record changes
@@ -131,25 +134,28 @@ def parseGitLogData(stream, exclude_re=None):
 
   return stats
 
-def getGitStats(log_args, exclude_re=None):
-  stat = '--shortstat' if not exclude_re else '--numstat'
+def getGitStats(log_args, include=None, exclude=None):
+  stat = '--numstat' if include or exclude else '--shortstat'
   cmd = ['git', 'log', stat, '--pretty=format:+%an <%ae>']
   cmd.extend(log_args)
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-  return parseGitLogData(proc.stdout, exclude_re=exclude_re)
+  return parseGitLogData(proc.stdout, include=include, exclude=exclude)
 
 
 def main():
-  exclude_re = None
+  exclude = None
+  include = None
   log_args = []
 
   for arg in sys.argv[1:]: # look at incoming arguments, to see if we need any
-    if arg.startswith("--exclude-re="):
-      exclude_re = r'%s' % arg[len("--exclude-re="):]
+    if arg.startswith("--exclude-files="):
+      exclude = r'%s' % arg[len("--exclude-files="):]
+    elif arg.startswith("--include-files="):
+      include = r'%s' % arg[len("--include-files="):]
     else:
       log_args.append(arg)
 
-  stats = getGitStats(log_args, exclude_re=exclude_re)
+  stats = getGitStats(log_args, include=include, exclude=exclude)
 
   if not stats:
     print 'no commits'
