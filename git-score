@@ -61,6 +61,36 @@ class CommitStats(object):
     self._removed += int(removed)
     self._commits += 1
 
+class GitColor(object):
+  '''Gets and uses current git settings to color output.'''
+  _colorIsOn = None
+
+  @classmethod
+  def gitColorIsOn(cls):
+    '''Returns whether git config color.ui is on. Only queries once.'''
+    if cls._colorIsOn is not None:
+      return cls._colorIsOn
+
+    cmd = ['git', 'config', 'color.ui']
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    next = proc.stdout.next().strip()
+    cls._colorIsOn = next in ['true', 'always', 'auto']
+    return cls._colorIsOn
+
+  @classmethod
+  def red(cls, text):
+    '''Returns text, in red if color is on'''
+    if cls.gitColorIsOn():
+      return "\033[31m%s\033[0m" % text
+    return text
+
+  @classmethod
+  def green(cls, text):
+    '''Returns text, in green if color is on'''
+    if cls.gitColorIsOn():
+      return "\033[32m%s\033[0m" % text
+    return text
+
 
 def parseGitLogData(stream):
   pattern = re.compile(STAT_PATTERN)
@@ -105,10 +135,10 @@ def main():
     values = {'name': name_field,
               'commits': author_stats.commits(),
               'delta': author_stats.delta(),
-              'added': author_stats.added(),
-              'removed': author_stats.removed()}
+              'added': GitColor.green(author_stats.added()),
+              'removed': GitColor.red(author_stats.removed())}
 
-    print '%(name)s\t%(commits)d\t%(delta)d\t%(added)d\t%(removed)d' % values
+    print '%(name)s\t%(commits)d\t%(delta)d\t%(added)s\t%(removed)s' % values
 
 
 if __name__ == '__main__':
