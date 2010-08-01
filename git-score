@@ -12,6 +12,9 @@ import sys
 STAT_PATTERN = (r'^\s*(\d+) files changed, (\d+) insertions\(\+\), '
                 r'(\d+) deletions\(\-\)$')
 
+# Truncate long author names to this size.
+MAX_NAME_LENGTH = 45
+
 
 class CommitStats(object):
   def __init__(self, author):
@@ -93,10 +96,11 @@ def main():
 
   # Find length of longest author name.
   max_author_length = max([len(x) for x in stats.keys()])
+  max_author_length = min(max_author_length, MAX_NAME_LENGTH)
 
   print 'author%s\tcommits\tdelta\t(+)\t(-)' % (' ' * (max_author_length - 6))
   for author_stats in sorted(stats.values()):
-    author = author_stats.author()
+    author = author_stats.author()[0:MAX_NAME_LENGTH]
     name_field = '%s%s' % (author, ' ' * (max_author_length - len(author)))
     values = {'name': name_field,
               'commits': author_stats.commits(),
