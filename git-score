@@ -149,6 +149,7 @@ def main():
   include = None
   log_args = []
 
+  # TODO(msparks): this should use optparse.
   for arg in sys.argv[1:]:  # look at incoming arguments, to see if we need any
     if arg.startswith('--exclude-files='):
       exclude = r'%s' % arg[len('--exclude-files='):]
