@@ -7,8 +7,13 @@ Inside a git repository, just run
 
 % git-score
 
-It takes no arguments directly, but if you do specify them, they will be passed
-to `git log'. This way, you can specify revision ranges to narrow scoring to a
-particular set of commits.
+It takes the following arguments directly:
+
+  --exclude-re=<pattern>
+    Tallies scores per-file, and only if <pattern> does not match the filename.
+    This is useful to exclude directories or particular file extensions.
+
+All other arguments will be passed to `git log'. This way, you can specify
+revision ranges to narrow scoring to a particular set of commits.
 
 % git-score 61bf126e..HEAD
