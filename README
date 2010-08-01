@@ -12,7 +12,7 @@ It takes the following arguments directly:
   --exclude-files=<pattern>
     Tallies scores per-file, and if <pattern> matches the filename.
     This is useful to exclude directories or particular file extensions.
-    Warning: may run much slower. still untested on very large repos.
+    Warning: may run much slower. Still untested on very large repos.
 
   --include-files=<pattern>
     Same as exclude, but the reverse. (<pattern> must match)

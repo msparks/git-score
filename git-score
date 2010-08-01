@@ -94,7 +94,7 @@ class GitColor(object):
   def green(cls, text):
     '''Returns text, in green if color is on'''
     if cls.gitColorIsOn():
-      return "\033[32m%s\033[0m" % text
+      return '\033[32m%s\033[0m' % text
     return text
 
 
@@ -111,13 +111,13 @@ def parseGitLogData(stream, include=None, exclude=None):
     if line == '':
       continue  # skip blank lines
 
-    if line.startswith('+'): # author line, record new commit.
+    if line.startswith('+'):  # author line, record new commit.
       author = line[1:]  # remove leading '+'
       if author not in stats:
         stats[author] = CommitStats(author)
       stats[author].commitNew()
 
-    elif exclude or include: # file line, record per-file changes.
+    elif exclude or include:  # file line, record per-file changes.
       match = file_pattern.match(line)
       if match and author in stats:
         added, removed, filename = match.group(1, 2, 3)
@@ -134,6 +134,7 @@ def parseGitLogData(stream, include=None, exclude=None):
 
   return stats
 
+
 def getGitStats(log_args, include=None, exclude=None):
   stat = '--numstat' if include or exclude else '--shortstat'
   cmd = ['git', 'log', stat, '--pretty=format:+%an <%ae>']
@@ -147,11 +148,11 @@ def main():
   include = None
   log_args = []
 
-  for arg in sys.argv[1:]: # look at incoming arguments, to see if we need any
-    if arg.startswith("--exclude-files="):
-      exclude = r'%s' % arg[len("--exclude-files="):]
-    elif arg.startswith("--include-files="):
-      include = r'%s' % arg[len("--include-files="):]
+  for arg in sys.argv[1:]:  # look at incoming arguments, to see if we need any
+    if arg.startswith('--exclude-files='):
+      exclude = r'%s' % arg[len('--exclude-files='):]
+    elif arg.startswith('--include-files='):
+      include = r'%s' % arg[len('--include-files='):]
     else:
       log_args.append(arg)
 
