@@ -1,30 +1,101 @@
 #!/usr/bin/env python
-
 import os
-from subprocess import Popen
-from subprocess import PIPE
+import re
+import subprocess
 
-cmd = ["git", "log", "--shortstat", '--pretty=format:commit %an']
 
-proc = Popen(cmd, stdout=PIPE)
+STAT_PATTERN = (r'^\s*(\d+) files changed, (\d+) insertions\(\+\), '
+                r'(\d+) deletions\(\-\)$')
 
-authors = {}
-user = None
 
-for line in proc.stdout:
-  args = line.split(" ")
-  if line.startswith("commit"):
-    user = args[1].strip()
-    if user not in authors:
-      authors[user] = [0, 0, 0, 0]
-    authors[user][0] += 1
-  elif len(line) > 5:
-    authors[user][1] += int(args[1])
-    authors[user][2] += int(args[4])
-    authors[user][3] += int(args[6])
+class CommitStats(object):
+  def __init__(self, author):
+    self._author = author
+    self._added = 0
+    self._removed = 0
+    self._commits = 0
 
-print "author\tcommits\tchanges\t(+)\t(-)"
-for author in authors:
-  nums = authors[author]
-  print "%s\t%i\t%i\t%i\t%i" % (author, nums[0], nums[1], nums[2], nums[3])
+  def __cmp__(self, other):
+    '''Comparison method. For sorting. Larger deltas are ordered first.'''
+    return cmp(other.delta(), self.delta())
 
+  def author(self):
+    '''Returns author name.'''
+    return self._author
+
+  def commits(self):
+    '''Returns number of total commits.'''
+    return self._commits
+
+  def added(self):
+    '''Returns number of lines added over all commits.'''
+    return self._added
+
+  def removed(self):
+    '''Returns number of lines removed over all commits.'''
+    return self._removed
+
+  def delta(self):
+    '''Returns delta of lines added and removed.'''
+    return self._added - self._removed
+
+  def commitNew(self, added, removed):
+    '''Records a new commit.
+
+    Args:
+      added: number of lines added in this commit
+      removed: number of lines removed in this commit
+
+    Returns:
+      None
+    '''
+    self._added += int(added)
+    self._removed += int(removed)
+    self._commits += 1
+
+
+def parseGitLogData(stream):
+  pattern = re.compile(STAT_PATTERN)
+  stats = {}
+
+  for line in stream:
+    line = line.strip()
+    if line == '':
+      continue  # skip blank lines
+
+    if line.startswith('+'):
+      author = line[1:]  # remove leading '+'
+      if author not in stats:
+        stats[author] = CommitStats(author)
+    else:
+      match = pattern.match(line)
+      if match and author in stats:
+        files, added, removed = match.group(1, 2, 3)
+        stats[author].commitNew(added, removed)
+
+  return stats
+
+
+def main():
+  cmd = ['git', 'log', '--shortstat', '--pretty=format:+%an <%ae>']
+  proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+  stats = parseGitLogData(proc.stdout)
+
+  # Find length of longest author name.
+  max_author_length = max([len(x) for x in stats.keys()])
+
+  print 'author%s\tcommits\tdelta\t(+)\t(-)' % (' ' * (max_author_length - 6))
+  for author_stats in sorted(stats.values()):
+    author = author_stats.author()
+    name_field = '%s%s' % (author, ' ' * (max_author_length - len(author)))
+    values = {'name': name_field,
+              'commits': author_stats.commits(),
+              'delta': author_stats.delta(),
+              'added': author_stats.added(),
+              'removed': author_stats.removed()}
+
+    print '%(name)s\t%(commits)d\t%(delta)d\t%(added)d\t%(removed)d' % values
+
+
+if __name__ == '__main__':
+  main()
