@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import os
+from subprocess import Popen
+from subprocess import PIPE
+
+cmd = ["git", "log", "--shortstat", '--pretty=format:commit %an']
+
+proc = Popen(cmd, stdout=PIPE)
+
+authors = {}
+user = None
+
+for line in proc.stdout:
+  args = line.split(" ")
+  if line.startswith("commit"):
+    user = args[1].strip()
+    if user not in authors:
+      authors[user] = [0, 0, 0, 0]
+    authors[user][0] += 1
+  elif len(line) > 5:
+    authors[user][1] += int(args[1])
+    authors[user][2] += int(args[4])
+    authors[user][3] += int(args[6])
+
+print "author\tcommits\tchanges\t(+)\t(-)"
+for author in authors:
+  nums = authors[author]
+  print "%s\t%i\t%i\t%i\t%i" % (author, nums[0], nums[1], nums[2], nums[3])
+
