@@ -139,29 +139,29 @@ def parseGitLogData(stream, include=None, exclude=None):
   return stats
 
 
-def gitStats(log_args, include=None, exclude=None):
-  stat = '--numstat' if include or exclude else '--shortstat'
+def gitStats(log_args, **kwds):
+  use_numstat = 'include' in kwds or 'exclude' in kwds
+  stat = '--numstat' if use_numstat else '--shortstat'
   cmd = ['git', 'log', stat, '--pretty=format:+%an <%ae>']
   cmd.extend(log_args)
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-  return parseGitLogData(proc.stdout, include=include, exclude=exclude)
+  return parseGitLogData(proc.stdout, **kwds)
 
 
 def main():
-  exclude = None
-  include = None
+  params = {}
   log_args = []
 
   # TODO(msparks): this should use optparse.
   for arg in sys.argv[1:]:  # look at incoming arguments, to see if we need any
     if arg.startswith('--exclude-files='):
-      exclude = r'%s' % arg[len('--exclude-files='):]
+      params['exclude'] = r'%s' % arg[len('--exclude-files='):]
     elif arg.startswith('--include-files='):
-      include = r'%s' % arg[len('--include-files='):]
+      params['include'] = r'%s' % arg[len('--include-files='):]
     else:
       log_args.append(arg)
 
-  stats = gitStats(log_args, include=include, exclude=exclude)
+  stats = gitStats(log_args, **params)
 
   if not stats:
     print 'no commits'
