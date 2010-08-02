@@ -20,7 +20,8 @@ It takes the following arguments directly:
     Warning: may run much slower. Still untested on very large repos.
 
   --include-files=<pattern>
-    Same as exclude, but the reverse. (<pattern> must match)
+    Same as exclude, but the reverse (<pattern> must match).
+    Include and exclude can be used in conjunction.
 
 All other arguments will be passed to `git log'. This way, you can specify
 revision ranges to narrow scoring to a particular set of commits.
