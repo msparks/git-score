@@ -24,35 +24,42 @@ class CommitStats(object):
     self._added = 0
     self._removed = 0
     self._commits = 0
-    self._sortby = "-delta"
+    self._order = "-delta"
 
   def __cmp__(self, other):
     '''Comparison method for sorting. The field to sort by can be specified.
     By default, larger deltas are ordered first.'''
-    field = self._sortby[1:]
-    ascending = self._sortby[0] == '+'
+    field = self._order[1:]
+    ascending = self._order[0] == '+'
 
     if ascending:
       return cmp(getattr(self, field)(), getattr(other, field)())
     return cmp(getattr(other, field)(), getattr(self, field)())
 
-  def sortby(self, sortby):
+  def sortBy(self, order):
+    if order[0] in ['-','+']:
+      field = order[1:]
+      ascending = order[0] == '+'
+    else:
+      field = order
+      ascending = None  # None here so we can set defaults after field adjust.
+
     # adjust fields to use
-    if sortby.endswith('author'):
-      sortby += 'lower'
-    elif sortby.endswith('(+)'):
-      sortby = sortby[0:len(sortby) - 3] + 'added'
-    elif sortby.endswith('(-)'):
-      sortby = sortby[0:len(sortby) - 3] + 'removed'
+    if field == 'author':
+      field = '_authorlower'
+    elif field == '(+)':
+      field = 'added'
+    elif field == '(-)':
+      field = 'removed'
 
     # all default to descending, except author
-    if sortby == 'authorlower':
-      sortby = "+%s" % sortby
-    if sortby[0] not in ['+', '-']:
-      sortby = "-%s" % sortby
+    if ascending == None:
+      ascending = field == '_authorlower'
 
-    if hasattr(self, sortby[1:]):
-      self._sortby = sortby
+    ascendingSign = '+' if ascending else '-'
+
+    if hasattr(self, field):
+      self._order = '%c%s' % (ascendingSign, field)
 
   def authorlower(self):
     '''Returns author name in lowercase. For sorting.'''
@@ -94,7 +101,6 @@ class CommitStats(object):
     '''
     self._added += int(added)
     self._removed += int(removed)
-
 
 class GitColor(object):
   '''Gets and uses current git settings to color output.'''
@@ -147,7 +153,7 @@ def parseGitLogData(stream, include=None, exclude=None, sortby=None):
       if author not in stats:
         stats[author] = CommitStats(author)
         if sortby:
-          stats[author].sortby(sortby)
+          stats[author].sortBy(sortby)
       stats[author].commitNew()
 
     # File line, record per-file changes.
