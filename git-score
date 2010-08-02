@@ -24,10 +24,39 @@ class CommitStats(object):
     self._added = 0
     self._removed = 0
     self._commits = 0
+    self._sortby = "-delta"
 
   def __cmp__(self, other):
-    '''Comparison method. For sorting. Larger deltas are ordered first.'''
-    return cmp(other.delta(), self.delta())
+    '''Comparison method for sorting. The field to sort by can be specified.
+    By default, larger deltas are ordered first.'''
+    field = self._sortby[1:]
+    ascending = self._sortby[0] == '+'
+
+    if ascending:
+      return cmp(getattr(self, field)(), getattr(other, field)())
+    return cmp(getattr(other, field)(), getattr(self, field)())
+
+  def sortby(self, sortby):
+    # adjust fields to use
+    if sortby.endswith('author'):
+      sortby += 'lower'
+    elif sortby.endswith('(+)'):
+      sortby = sortby[0:len(sortby) - 3] + 'added'
+    elif sortby.endswith('(-)'):
+      sortby = sortby[0:len(sortby) - 3] + 'removed'
+
+    # all default to descending, except author
+    if sortby == 'authorlower':
+      sortby = "+%s" % sortby
+    if sortby[0] not in ['+', '-']:
+      sortby = "-%s" % sortby
+
+    if hasattr(self, sortby[1:]):
+      self._sortby = sortby
+
+  def authorlower(self):
+    '''Returns author name in lowercase. For sorting.'''
+    return self._author.lower()
 
   def author(self):
     '''Returns author name.'''
@@ -99,7 +128,7 @@ class GitColor(object):
     return text
 
 
-def parseGitLogData(stream, include=None, exclude=None):
+def parseGitLogData(stream, include=None, exclude=None, sortby=None):
   stat_pattern = re.compile(STAT_PATTERN)
   file_pattern = re.compile(FILE_PATTERN)
   exclude_pattern = re.compile(exclude) if exclude else None
@@ -117,6 +146,8 @@ def parseGitLogData(stream, include=None, exclude=None):
       author = line[1:]  # remove leading '+'
       if author not in stats:
         stats[author] = CommitStats(author)
+        if sortby:
+          stats[author].sortby(sortby)
       stats[author].commitNew()
 
     # File line, record per-file changes.
@@ -158,6 +189,8 @@ def main():
       params['exclude'] = r'%s' % arg[len('--exclude-files='):]
     elif arg.startswith('--include-files='):
       params['include'] = r'%s' % arg[len('--include-files='):]
+    elif arg.startswith('--sortby='):
+      params['sortby'] = arg[len('--sortby='):]
     else:
       log_args.append(arg)
 
