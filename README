@@ -23,6 +23,11 @@ It takes the following arguments directly:
     Same as exclude, but the reverse (<pattern> must match).
     Include and exclude can be used in conjunction.
 
+  --sortby=[+-]<field>
+    Sorts by chosen <field>. Prepend a + or a - for ascending or descending.
+    <field> must be one of: author, commits, delta, added, removed, (+), (-)
+    All fields (except author) default to descending.
+
 All other arguments will be passed to `git log'. This way, you can specify
 revision ranges to narrow scoring to a particular set of commits.
 
@@ -56,3 +61,13 @@ author                          commits delta  (+)    (-)
 jbenet <jbenet@---------------> 267     1884   3568   1684
 Rico <----------------------->  39      738    918    180
 chris <------------------->     46      696    936    240
+
+% git score --sortby=author
+author                          commits delta  (+)    (-)
+jbenet <jbenet@cs.stanford.edu> 12      136    183    47
+Matt Sparks <ms@quadpoint.org>  13      143    184    41
+
+% git score --sortby=commits
+author                          commits delta  (+)    (-)
+Matt Sparks <ms@quadpoint.org>  13      143    184    41
+jbenet <jbenet@cs.stanford.edu> 12      136    183    47
