@@ -61,7 +61,7 @@ class CommitStats(object):
     if hasattr(self, field):
       self._order = '%c%s' % (ascendingSign, field)
 
-  def authorlower(self):
+  def _authorlower(self):
     '''Returns author name in lowercase. For sorting.'''
     return self._author.lower()
 
