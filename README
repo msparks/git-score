@@ -71,3 +71,14 @@ Matt Sparks <ms@quadpoint.org>  13      143    184    41
 author                          commits delta  (+)    (-)
 Matt Sparks <ms@quadpoint.org>  13      143    184    41
 jbenet <jbenet@cs.stanford.edu> 12      136    183    47
+
+% git score --sortby=-delta
+author                          commits delta  (+)    (-)
+jbenet <jbenet@cs.stanford.edu> 13      151    198    47
+Matt Sparks <ms@quadpoint.org>  13      143    184    41
+
+% git score --sortby=+added
+author                          commits delta  (+)    (-)
+Matt Sparks <ms@quadpoint.org>  13      143    184    41
+jbenet <jbenet@cs.stanford.edu> 13      151    198    47
+
