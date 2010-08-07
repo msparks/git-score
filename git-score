@@ -17,61 +17,51 @@ FILE_PATTERN =  r'^\s*(\d+)\t(\d+)\t(.*)$'
 # Truncate long author names to this size.
 MAX_NAME_LENGTH = 45
 
-
-class CommitStats(object):
-  def __init__(self, author):
+class CommitStat(object):
+  '''Represents the statistics of one commit.'''
+  def __init__(self, author, added, removed, files):
     self._author = author
-    self._added = 0
-    self._removed = 0
-    self._commits = 0
-    self._order = "-delta"
-
-  def __cmp__(self, other):
-    '''Comparison method for sorting. The field to sort by can be specified.
-    By default, larger deltas are ordered first.'''
-    field = self._order[1:]
-    ascending = self._order[0] == '+'
-
-    if ascending:
-      return cmp(getattr(self, field)(), getattr(other, field)())
-    return cmp(getattr(other, field)(), getattr(self, field)())
-
-  def sortBy(self, order):
-    if order[0] in ['-','+']:
-      field = order[1:]
-      ascending = order[0] == '+'
-    else:
-      field = order
-      ascending = None  # None here so we can set defaults after field adjust.
-
-    # adjust fields to use
-    if field == 'author':
-      field = '_authorlower'
-    elif field == '(+)':
-      field = 'added'
-    elif field == '(-)':
-      field = 'removed'
-
-    # all default to descending, except author
-    if ascending == None:
-      ascending = field == '_authorlower'
-
-    ascendingSign = '+' if ascending else '-'
-
-    if hasattr(self, field):
-      self._order = '%c%s' % (ascendingSign, field)
-
-  def _authorlower(self):
-    '''Returns author name in lowercase. For sorting.'''
-    return self._author.lower()
+    self._added = added
+    self._removed = removed
+    self._files = files
 
   def author(self):
     '''Returns author name.'''
     return self._author
 
-  def commits(self):
-    '''Returns number of total commits.'''
-    return self._commits
+  def added(self):
+    '''Returns number of lines added in this commit.'''
+    return self._added
+
+  def removed(self):
+    '''Returns number of lines removed in this commit.'''
+    return self._removed
+
+  def delta(self):
+    '''Returns delta of lines added and removed in this commit.'''
+    return self._added - self._removed
+
+  def numFilesChanged(self):
+    '''Returns the number of files changed'''
+    return len(self._files)
+
+  def __str__(self):
+    '''Return string representation'''
+    return '%s (+ %i,- %i)' % (self._author, self._added, self._removed)
+
+
+class CommitStatList(object):
+  '''An aggregated group of CommitStat'''
+  def __init__(self, name=""):
+    self._name = name
+    self._added = 0
+    self._removed = 0
+    self._commits = list()
+    self._files = set()
+
+  def name(self):
+    '''Returns the name of this CommitStatList.'''
+    return self._name
 
   def added(self):
     '''Returns number of lines added over all commits.'''
@@ -85,22 +75,69 @@ class CommitStats(object):
     '''Returns delta of lines added and removed.'''
     return self._added - self._removed
 
-  def commitNew(self):
-    '''Records a new commit.'''
-    self._commits += 1
+  def numFilesChanged(self):
+    '''Returns the number of files changed'''
+    return len(self._files)
 
-  def commitAddChanges(self, added, removed):
-    '''Records changes. Does not record a new commit.
+  def commits(self):
+    '''Returns number of total commits.'''
+    return len(self._commits)
 
+  def add(self, commitstat):
+    '''Adds a CommitStat, aggregating counts'''
+    if not isinstance(commitstat, CommitStat):
+      raise TypeError('commitstat is not of type CommitStat')
+
+    self._added += commitstat._added
+    self._removed += commitstat._removed
+    self._files.update(commitstat._files)
+    self._commits.append(commitstat)
+
+
+class AuthorMap(object):
+  '''The representation of a collection of authors and their CommitStats'''
+  def __init__(self):
+    self._stats = {}
+    self._orderfield = 'delta'  # default sorting field
+    self._ascending = False  # default sorting direction
+
+  def order(self, order):
+    '''Defines the sort order for this AuthorMap.
     Args:
-      added: number of lines added in this commit
-      removed: number of lines removed in this commit
-
-    Returns:
-      None
+      order: the direction and field to sort by. Accepted orders:
+             [+-]?(author|files|commits|added|removed|delta])
     '''
-    self._added += int(added)
-    self._removed += int(removed)
+    if order[0] in ['-', '+']:  # direction was specified
+      self._orderfield = order[1:]
+      self._ascending = order[0] == '+'
+    else:
+      self._orderfield = order
+      self._ascending = order == 'author'  # descending default, except authors
+
+  def __iter__(self):
+    '''Returns iterator for the sorted keys of the author map.'''
+    def statkey(stat):
+      '''Returns the value to sort a CommitStatList by.'''
+      if self._orderfield == 'author':
+        return stat.name().lower()  # named the commit lists by author name
+      if self._orderfield == 'files':
+        return stat.numFilesChanged()
+      return getattr(stat, self._orderfield)()
+
+    stats = self._stats.values()
+    stats.sort(key=statkey)
+    stats = map(lambda statset: statset.name(), stats)  # want keys, not values
+
+    if not self._ascending:
+      stats.reverse()
+    return iter(stats)
+
+  def __getitem__(self, author):
+    '''Returns the CommitStatList for a particular author'''
+    if author not in self._stats:
+      self._stats[author] = CommitStatList(author)
+    return self._stats[author]
+
 
 class GitColor(object):
   '''Gets and uses current git settings to color output.'''
@@ -134,52 +171,63 @@ class GitColor(object):
     return text
 
 
-def parseGitLogData(stream, include=None, exclude=None, sortby=None):
+def parseGitLogData(stream, include=None, exclude=None, **kwds):
+
+  class ParseCommitData(object):
+    '''A utility class to keep track of commit stats currently being parsed.'''
+    author = None
+    added = 0
+    removed = 0
+    files = None
+
+    @classmethod
+    def reset(cls, author):
+      cls.author = author
+      cls.added = 0
+      cls.removed = 0
+      cls.files = set()
+
+    @classmethod
+    def commitStat(cls):
+      return CommitStat(cls.author, cls.added, cls.removed, cls.files)
+
   stat_pattern = re.compile(STAT_PATTERN)
   file_pattern = re.compile(FILE_PATTERN)
   exclude_pattern = re.compile(exclude) if exclude else None
   include_pattern = re.compile(include) if include else None
 
-  stats = {}
+  authorstats = AuthorMap()
 
   for line in stream:
     line = line.strip()
     if line == '':
       continue  # skip blank lines
 
-    # Author line, record new commit.
+    # Author line, aggregate last commit (if any) and reset counts
     if line.startswith('+'):
-      author = line[1:]  # remove leading '+'
-      if author not in stats:
-        stats[author] = CommitStats(author)
-        if sortby:
-          stats[author].sortBy(sortby)
-      stats[author].commitNew()
+      if ParseCommitData.author != None:
+        authorstats[ParseCommitData.author].add( ParseCommitData.commitStat() )
+      ParseCommitData.reset(line[1:]) # remove leading '+'
 
     # File line, record per-file changes.
-    elif exclude or include:
-      match = file_pattern.match(line)
-      if match and author in stats:
-        added, removed, filename = match.group(1, 2, 3)
-        exclude_file = exclude and exclude_pattern.match(filename)
-        include_file = not include or include_pattern.match(filename)
-        if include_file and not exclude_file:
-          stats[author].commitAddChanges(added, removed)
-
-    # Summary line, record changes.
     else:
-      match = stat_pattern.match(line)
-      if match and author in stats:
-        files, added, removed = match.group(1, 2, 3)
-        stats[author].commitAddChanges(added, removed)
+      match = file_pattern.match(line)
+      if not match:
+        continue
 
-  return stats
+      added, removed, filename = match.group(1, 2, 3)
+      exclude_file = exclude and exclude_pattern.match(filename)
+      include_file = not include or include_pattern.match(filename)
+      if include_file and not exclude_file:
+        ParseCommitData.added += int(added)
+        ParseCommitData.removed += int(removed)
+        ParseCommitData.files.add(filename)
+
+  return authorstats
 
 
 def gitStats(log_args, **kwds):
-  use_numstat = 'include' in kwds or 'exclude' in kwds
-  stat = '--numstat' if use_numstat else '--shortstat'
-  cmd = ['git', 'log', stat, '--pretty=format:+%an <%ae>']
+  cmd = ['git', 'log', '--numstat', '--pretty=format:+%an <%ae>']
   cmd.extend(log_args)
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
   return parseGitLogData(proc.stdout, **kwds)
@@ -201,26 +249,30 @@ def main():
       log_args.append(arg)
 
   stats = gitStats(log_args, **params)
+  if 'sortby' in params:
+    stats.order(params['sortby'])
 
   if not stats:
     print 'no commits'
     sys.exit(0)
 
   # Find length of longest author name.
-  max_author_length = max([len(x) for x in stats.keys()])
-  max_author_length = min(max_author_length, MAX_NAME_LENGTH)
+  author_length = max([len(a) for a in stats])
+  author_length = min(author_length, MAX_NAME_LENGTH)
 
-  print 'author%s\tcommits\tdelta\t(+)\t(-)' % (' ' * (max_author_length - 6))
-  for author_stats in sorted(stats.values()):
-    author = author_stats.author()[0:MAX_NAME_LENGTH]
-    name_field = '%s%s' % (author, ' ' * (max_author_length - len(author)))
+  print 'author%s\tcommits\tfiles\tdelta\t(+)\t(-)' % (' ' * (author_length-6))
+  for author in stats:
+    name_field = author[0:MAX_NAME_LENGTH]
+    name_field = '%s%s' % (author, ' ' * (author_length - len(name_field)))
     values = {'name': name_field,
-              'commits': author_stats.commits(),
-              'delta': author_stats.delta(),
-              'added': GitColor.green(author_stats.added()),
-              'removed': GitColor.red(author_stats.removed())}
+              'commits': stats[author].commits(),
+              'files': stats[author].numFilesChanged(),
+              'delta': stats[author].delta(),
+              'added': GitColor.green(stats[author].added()),
+              'removed': GitColor.red(stats[author].removed()) }
 
-    print '%(name)s\t%(commits)d\t%(delta)d\t%(added)s\t%(removed)s' % values
+    print '%(name)s\t%(commits)d\t%(files)d' % values,
+    print '\t%(delta)d\t%(added)s\t%(removed)s' % values
 
 
 if __name__ == '__main__':
