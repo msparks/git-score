@@ -227,6 +227,10 @@ def parseGitLogData(stream, options):
         ParseCommitData.removed += int(removed)
         ParseCommitData.files.add(filename)
 
+  # Process last commit.
+  if ParseCommitData.author != None and len(ParseCommitData.files) > 0:
+    authorstats[ParseCommitData.author].add(ParseCommitData.commitStat())
+
   return authorstats
 
 
