@@ -14,21 +14,21 @@ Inside a git repository, just run
 
 It takes the following arguments directly
 
-  --exclude-files=<pattern>
+  -e, --exclude=<pattern>
     Tallies scores per-file, and if <pattern> matches the filename.
     This is useful to exclude directories or particular file extensions.
     Warning: may run much slower. Still untested on very large repos.
 
-  --include-files=<pattern>
+  -i, --include=<pattern>
     Same as exclude, but the reverse (<pattern> must match).
     Include and exclude can be used in conjunction.
 
-  --order=[+-]<field>
+  -o, --order=[+-]<field>
     Sorts by chosen <field>. Prepend [+,-] for [ascending, descending]
     <field> must be one of: author, files, commits, delta, added, removed
     All fields (except author) default to descending.
 
-  --help
+  -h, --help
     Shows available options.
 
 All other arguments not beginning with a hypen ('-') will be passed to `git
@@ -54,13 +54,13 @@ author                          commits files  delta  (+)    (-)
 jbenet <jbenet@---------------> 7       2      46     77     31
 Matt Sparks <ms@------------->  6       2      14     31     17
 
-% git score --include-files=.*\.[hm]$
+% git score --include=.*\.[hm]$
 author                          commits files  delta  (+)    (-)
 jbenet <jbenet@---------------> 267     363    24664  47848  23184
 chris <------------------->     46      126    12908  17156  4248
 Rico <----------------------->  39      119    8659   10880  2221
 
-% git score --include-files=.*/src/.*$ --exclude-files=.*\.m$
+% git score --include=.*/src/.*$ --exclude=.*\.m$
 author                          commits files  delta  (+)    (-)
 jbenet <jbenet@---------------> 267     124    1884   3568   1684
 Rico <----------------------->  39      46     738    918    180
