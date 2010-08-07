@@ -25,7 +25,7 @@ It takes the following arguments directly
 
   --order=[+-]<field>
     Sorts by chosen <field>. Prepend [+,-] for [ascending, descending]
-    <field> must be one of: author, commits, delta, added, removed, (+), (-)
+    <field> must be one of: author, files, commits, delta, added, removed
     All fields (except author) default to descending.
 
 All other arguments will be passed to `git log'. This way, you can specify
@@ -41,44 +41,44 @@ EXAMPLES
 NOTE: Emails obscured here.
 
 % git score
-author                          commits delta  (+)    (-)
-Matt Sparks <ms@------------->  13      143    184    41
-jbenet <jbenet@---------------> 8       76     110    34
+author                          commits files  delta  (+)    (-)
+Matt Sparks <ms@------------->  13      2      143    184    41
+jbenet <jbenet@---------------> 8       2      76     110    34
 
 % git score b210b0..HEAD
-author                          commits delta  (+)    (-)
-jbenet <jbenet@---------------> 7       46     77     31
-Matt Sparks <ms@------------->  6       14     31     17
+author                          commits files  delta  (+)    (-)
+jbenet <jbenet@---------------> 7       2      46     77     31
+Matt Sparks <ms@------------->  6       2      14     31     17
 
 % git score --include-files=.*\.[hm]$
-author                          commits delta  (+)    (-)
-jbenet <jbenet@---------------> 267     24664  47848  23184
-chris <------------------->     46      12908  17156  4248
-Rico <----------------------->  39      8659   10880  2221
+author                          commits files  delta  (+)    (-)
+jbenet <jbenet@---------------> 267     363    24664  47848  23184
+chris <------------------->     46      126    12908  17156  4248
+Rico <----------------------->  39      119    8659   10880  2221
 
 % git score --include-files=.*/src/.*$ --exclude-files=.*\.m$
-author                          commits delta  (+)    (-)
-jbenet <jbenet@---------------> 267     1884   3568   1684
-Rico <----------------------->  39      738    918    180
-chris <------------------->     46      696    936    240
+author                          commits files  delta  (+)    (-)
+jbenet <jbenet@---------------> 267     124    1884   3568   1684
+Rico <----------------------->  39      46     738    918    180
+chris <------------------->     46      44     696    936    240
 
 % git score --order=author
-author                          commits delta  (+)    (-)
-jbenet <jbenet@---------------> 12      136    183    47
-Matt Sparks <ms@------------->  13      143    184    41
+author                          commits files  delta  (+)    (-)
+jbenet <jbenet@---------------> 12      2      136    183    47
+Matt Sparks <ms@------------->  13      2      143    184    41
 
 % git score --order=commits
-author                          commits delta  (+)    (-)
-Matt Sparks <ms@------------->  13      143    184    41
-jbenet <jbenet@---------------> 12      136    183    47
+author                          commits files  delta  (+)    (-)
+Matt Sparks <ms@------------->  13      2      143    184    41
+jbenet <jbenet@---------------> 12      2      136    183    47
 
 % git score --order=-delta
-author                          commits delta  (+)    (-)
-jbenet <jbenet@---------------> 13      151    198    47
-Matt Sparks <ms@------------->  13      143    184    41
+author                          commits files  delta  (+)    (-)
+jbenet <jbenet@---------------> 13      2      151    198    47
+Matt Sparks <ms@------------->  13      2      143    184    41
 
 % git score --order=+added
-author                          commits delta  (+)    (-)
-Matt Sparks <ms@------------->  13      143    184    41
-jbenet <jbenet@---------------> 13      151    198    47
+author                          commits files  delta  (+)    (-)
+Matt Sparks <ms@------------->  13      2      143    184    41
+jbenet <jbenet@---------------> 13      2      151    198    47
 
