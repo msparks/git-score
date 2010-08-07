@@ -269,8 +269,8 @@ def main():
 
   print 'author%s\tcommits\tfiles\tdelta\t(+)\t(-)' % (' ' * (author_length-6))
   for author in stats:
-    name_field = author[0:MAX_NAME_LENGTH]
-    name_field = '%s%s' % (author, ' ' * (author_length - len(name_field)))
+    name_field = author[0:author_length]
+    name_field = '%s%s' % (name_field, ' ' * (author_length - len(name_field)))
     values = {'name': name_field,
               'commits': stats[author].commits(),
               'files': stats[author].numFilesChanged(),
