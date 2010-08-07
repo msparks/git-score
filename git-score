@@ -25,6 +25,10 @@ class CommitStat(object):
     self._removed = removed
     self._files = files
 
+  def __str__(self):
+    '''Return string representation.'''
+    return '%s (+ %i,- %i)' % (self._author, self._added, self._removed)
+
   def author(self):
     '''Returns author name.'''
     return self._author
@@ -42,16 +46,12 @@ class CommitStat(object):
     return self._added - self._removed
 
   def numFilesChanged(self):
-    '''Returns the number of files changed'''
+    '''Returns the number of files changed.'''
     return len(self._files)
-
-  def __str__(self):
-    '''Return string representation'''
-    return '%s (+ %i,- %i)' % (self._author, self._added, self._removed)
 
 
 class CommitStatList(object):
-  '''An aggregated group of CommitStat'''
+  '''An aggregated group of CommitStat.'''
   def __init__(self, name=""):
     self._name = name
     self._added = 0
@@ -84,7 +84,7 @@ class CommitStatList(object):
     return len(self._commits)
 
   def add(self, commitstat):
-    '''Adds a CommitStat, aggregating counts'''
+    '''Adds a CommitStat, aggregating counts.'''
     if not isinstance(commitstat, CommitStat):
       raise TypeError('commitstat is not of type CommitStat')
 
@@ -95,24 +95,17 @@ class CommitStatList(object):
 
 
 class AuthorMap(object):
-  '''The representation of a collection of authors and their CommitStats'''
+  '''The representation of a collection of authors and their CommitStats.'''
   def __init__(self):
     self._stats = {}
     self._orderfield = 'delta'  # default sorting field
     self._ascending = False  # default sorting direction
 
-  def order(self, order):
-    '''Defines the sort order for this AuthorMap.
-    Args:
-      order: the direction and field to sort by. Accepted orders:
-             [+-]?(author|files|commits|added|removed|delta])
-    '''
-    if order[0] in ['-', '+']:  # direction was specified
-      self._orderfield = order[1:]
-      self._ascending = order[0] == '+'
-    else:
-      self._orderfield = order
-      self._ascending = order == 'author'  # descending default, except authors
+  def __getitem__(self, author):
+    '''Returns the CommitStatList for a particular author.'''
+    if author not in self._stats:
+      self._stats[author] = CommitStatList(author)
+    return self._stats[author]
 
   def __iter__(self):
     '''Returns iterator for the sorted keys of the author map.'''
@@ -132,11 +125,19 @@ class AuthorMap(object):
       stats.reverse()
     return iter(stats)
 
-  def __getitem__(self, author):
-    '''Returns the CommitStatList for a particular author'''
-    if author not in self._stats:
-      self._stats[author] = CommitStatList(author)
-    return self._stats[author]
+  def order(self, order):
+    '''Defines the sort order for this AuthorMap.
+
+    Args:
+      order: the direction and field to sort by. Accepted orders:
+             [+-]?(author|files|commits|added|removed|delta])
+    '''
+    if order[0] in ['-', '+']:  # direction was specified
+      self._orderfield = order[1:]
+      self._ascending = order[0] == '+'
+    else:
+      self._orderfield = order
+      self._ascending = order == 'author'  # descending default, except authors
 
 
 class GitColor(object):
@@ -172,7 +173,6 @@ class GitColor(object):
 
 
 def parseGitLogData(stream, include=None, exclude=None, **kwds):
-
   class ParseCommitData(object):
     '''A utility class to keep track of commit stats currently being parsed.'''
     author = None
@@ -206,8 +206,8 @@ def parseGitLogData(stream, include=None, exclude=None, **kwds):
     # Author line, aggregate last commit (if any) and reset counts
     if line.startswith('+'):
       if ParseCommitData.author != None:
-        authorstats[ParseCommitData.author].add( ParseCommitData.commitStat() )
-      ParseCommitData.reset(line[1:]) # remove leading '+'
+        authorstats[ParseCommitData.author].add(ParseCommitData.commitStat())
+      ParseCommitData.reset(line[1:])  # remove leading '+'
 
     # File line, record per-file changes.
     else:
