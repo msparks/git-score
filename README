@@ -23,8 +23,8 @@ It takes the following arguments directly
     Same as exclude, but the reverse (<pattern> must match).
     Include and exclude can be used in conjunction.
 
-  --sortby=[+-]<field>
-    Sorts by chosen <field>. Prepend a + or a - for ascending or descending.
+  --order=[+-]<field>
+    Sorts by chosen <field>. Prepend [+,-] for [ascending, descending]
     <field> must be one of: author, commits, delta, added, removed, (+), (-)
     All fields (except author) default to descending.
 
@@ -62,22 +62,22 @@ jbenet <jbenet@---------------> 267     1884   3568   1684
 Rico <----------------------->  39      738    918    180
 chris <------------------->     46      696    936    240
 
-% git score --sortby=author
+% git score --order=author
 author                          commits delta  (+)    (-)
 jbenet <jbenet@---------------> 12      136    183    47
 Matt Sparks <ms@------------->  13      143    184    41
 
-% git score --sortby=commits
+% git score --order=commits
 author                          commits delta  (+)    (-)
 Matt Sparks <ms@------------->  13      143    184    41
 jbenet <jbenet@---------------> 12      136    183    47
 
-% git score --sortby=-delta
+% git score --order=-delta
 author                          commits delta  (+)    (-)
 jbenet <jbenet@---------------> 13      151    198    47
 Matt Sparks <ms@------------->  13      143    184    41
 
-% git score --sortby=+added
+% git score --order=+added
 author                          commits delta  (+)    (-)
 Matt Sparks <ms@------------->  13      143    184    41
 jbenet <jbenet@---------------> 13      151    198    47

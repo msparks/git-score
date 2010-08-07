@@ -243,14 +243,14 @@ def main():
       params['exclude'] = r'%s' % arg[len('--exclude-files='):]
     elif arg.startswith('--include-files='):
       params['include'] = r'%s' % arg[len('--include-files='):]
-    elif arg.startswith('--sortby='):
-      params['sortby'] = arg[len('--sortby='):]
+    elif arg.startswith('--order='):
+      params['order'] = arg[len('--order='):]
     else:
       log_args.append(arg)
 
   stats = gitStats(log_args, **params)
-  if 'sortby' in params:
-    stats.order(params['sortby'])
+  if 'order' in params:
+    stats.order(params['order'])
 
   if not stats:
     print 'no commits'
