@@ -126,6 +126,9 @@ class AuthorMap(object):
       stats.reverse()
     return iter(stats)
 
+  def __len__(self):
+    return len(self._stats.keys())
+
   def order(self, order):
     '''Defines the sort order for this AuthorMap.
 
@@ -206,7 +209,7 @@ def parseGitLogData(stream, options):
 
     # Author line, aggregate last commit (if any) and reset counts
     if line.startswith('+'):
-      if ParseCommitData.author != None:
+      if ParseCommitData.author != None and len(ParseCommitData.files) > 0:
         authorstats[ParseCommitData.author].add(ParseCommitData.commitStat())
       ParseCommitData.reset(line[1:])  # remove leading '+'
 
@@ -252,7 +255,7 @@ def main():
   if options.order:
     stats.order(options.order)
 
-  if not stats:
+  if len(stats) == 0:
     print 'no commits'
     sys.exit(0)
 
