@@ -28,8 +28,12 @@ It takes the following arguments directly
     <field> must be one of: author, files, commits, delta, added, removed
     All fields (except author) default to descending.
 
-All other arguments will be passed to `git log'. This way, you can specify
-revision ranges to narrow scoring to a particular set of commits.
+  --help
+    Shows available options.
+
+All other arguments not beginning with a hypen ('-') will be passed to `git
+log'. This way, you can specify revision ranges to narrow scoring to a
+particular set of commits.
 
 % git-score 61bf126e..HEAD
 
@@ -81,4 +85,3 @@ Matt Sparks <ms@------------->  13      2      143    184    41
 author                          commits files  delta  (+)    (-)
 Matt Sparks <ms@------------->  13      2      143    184    41
 jbenet <jbenet@---------------> 13      2      151    198    47
-
