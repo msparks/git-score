@@ -5,6 +5,7 @@
 # Author: Juan Batiz-Benet
 # Author: Matt Sparks
 import re
+import optparse
 import subprocess
 import sys
 
@@ -172,7 +173,7 @@ class GitColor(object):
     return text
 
 
-def parseGitLogData(stream, include=None, exclude=None, **kwds):
+def parseGitLogData(stream, options):
   class ParseCommitData(object):
     '''A utility class to keep track of commit stats currently being parsed.'''
     author = None
@@ -193,8 +194,8 @@ def parseGitLogData(stream, include=None, exclude=None, **kwds):
 
   stat_pattern = re.compile(STAT_PATTERN)
   file_pattern = re.compile(FILE_PATTERN)
-  exclude_pattern = re.compile(exclude) if exclude else None
-  include_pattern = re.compile(include) if include else None
+  exclude_pattern = re.compile(options.exclude) if options.exclude else None
+  include_pattern = re.compile(options.include) if options.include else None
 
   authorstats = AuthorMap()
 
@@ -216,8 +217,8 @@ def parseGitLogData(stream, include=None, exclude=None, **kwds):
         continue
 
       added, removed, filename = match.group(1, 2, 3)
-      exclude_file = exclude and exclude_pattern.match(filename)
-      include_file = not include or include_pattern.match(filename)
+      exclude_file = options.exclude and exclude_pattern.match(filename)
+      include_file = not options.include or include_pattern.match(filename)
       if include_file and not exclude_file:
         ParseCommitData.added += int(added)
         ParseCommitData.removed += int(removed)
@@ -226,31 +227,30 @@ def parseGitLogData(stream, include=None, exclude=None, **kwds):
   return authorstats
 
 
-def gitStats(log_args, **kwds):
+def gitStats(log_args, options):
   cmd = ['git', 'log', '--numstat', '--pretty=format:+%an <%ae>']
   cmd.extend(log_args)
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-  return parseGitLogData(proc.stdout, **kwds)
+  return parseGitLogData(proc.stdout, options)
+
+
+def parseArgs():
+  parser = optparse.OptionParser()
+  parser.add_option('-e', '--exclude', dest='exclude', metavar='PATTERN',
+                    help='exclude files matching PATTERN')
+  parser.add_option('-i', '--include', dest='include', metavar='PATTERN',
+                    help='include files matching PATTERN')
+  parser.add_option('-o', '--order', dest='order', metavar='ORDER',
+                    help='sorting order (e.g., +delta)')
+  options, args = parser.parse_args()
+  return options, args
 
 
 def main():
-  params = {}
-  log_args = []
-
-  # TODO(msparks): this should use optparse.
-  for arg in sys.argv[1:]:  # look at incoming arguments, to see if we need any
-    if arg.startswith('--exclude-files='):
-      params['exclude'] = r'%s' % arg[len('--exclude-files='):]
-    elif arg.startswith('--include-files='):
-      params['include'] = r'%s' % arg[len('--include-files='):]
-    elif arg.startswith('--order='):
-      params['order'] = arg[len('--order='):]
-    else:
-      log_args.append(arg)
-
-  stats = gitStats(log_args, **params)
-  if 'order' in params:
-    stats.order(params['order'])
+  options, log_args = parseArgs()
+  stats = gitStats(log_args, options)
+  if options.order:
+    stats.order(options.order)
 
   if not stats:
     print 'no commits'
