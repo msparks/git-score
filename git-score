@@ -255,6 +255,12 @@ def parseArgs():
   parser.add_option('-o', '--order', dest='order', metavar='ORDER',
                     help='sorting order (e.g., +delta)')
   options, args = parser.parse_args()
+
+  valid_orders = ('author', 'files', 'commits', 'delta', 'added', 'removed')
+  if options.order:
+    if len(options.order) < 2 or options.order[1:] not in valid_orders:
+      parser.error('invalid sorting order: %s' % options.order)
+
   return options, args
 
 
