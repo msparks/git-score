@@ -28,7 +28,12 @@ class CommitStat(object):
 
   def __str__(self):
     '''Return string representation.'''
-    return '%s (+ %i,- %i)' % (self._author, self._added, self._removed)
+    values = {'author': self._author,
+              'added': self._added,
+              'removed': self._removed,
+              'delta': self.delta(),
+              'files': str(list(self._files))}
+    return '%(author)s: d%(delta)d, +%(added)i, -%(removed)d %(files)s' % values
 
   def author(self):
     '''Returns author name.'''
