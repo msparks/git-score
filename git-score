@@ -4,8 +4,10 @@
 #
 # Author: Juan Batiz-Benet
 # Author: Matt Sparks
-import re
+import operator
 import optparse
+import os
+import re
 import subprocess
 import sys
 
@@ -17,6 +19,7 @@ FILE_PATTERN =  r'^\s*(\d+)\t(\d+)\t(.*)$'
 
 # Truncate long author names to this size.
 MAX_NAME_LENGTH = 45
+
 
 class CommitStat(object):
   '''Represents the statistics of one commit.'''
@@ -99,6 +102,15 @@ class CommitStatList(object):
     self._files.update(commitstat._files)
     self._commits.append(commitstat)
 
+  def __add__(self, other):
+    '''Adds this and another CommitStatList, creating a new CommitStatList.'''
+    csl = CommitStatList(self._name)
+    csl._added = self._added + other._added
+    csl._removed = self._removed + other._removed
+    csl._files = self._files.union(other._files)
+    csl._commits = self._commits + other._commits
+    return csl
+
 
 class AuthorMap(object):
   '''The representation of a collection of authors and their CommitStats.'''
@@ -133,6 +145,17 @@ class AuthorMap(object):
 
   def __len__(self):
     return len(self._stats.keys())
+
+  def __add__(self, other):
+    '''Returns a new AuthorMap representing the sum this and other stats.'''
+    am = AuthorMap()
+    for author in set(self._stats.keys() + other._stats.keys()):
+      am._stats[author] = self[author] + other[author]
+    return am
+
+  def __str__(self):
+    return 'AuthorMap(stats=%s, orderfield=%s, ascending=%s)' % (self._stats,
+        self._orderfield, self._ascending)
 
   def order(self, order):
     '''Defines the sort order for this AuthorMap.
@@ -181,7 +204,7 @@ class GitColor(object):
     return text
 
 
-def parseGitLogData(stream, options):
+def parseGitLogData(stream, options, path):
   class ParseCommitData(object):
     '''A utility class to keep track of commit stats currently being parsed.'''
     author = None
@@ -230,6 +253,8 @@ def parseGitLogData(stream, options):
       if include_file and not exclude_file:
         ParseCommitData.added += int(added)
         ParseCommitData.removed += int(removed)
+        if path:
+          filename = os.path.join(path, filename)
         ParseCommitData.files.add(filename)
 
   # Process last commit.
@@ -239,11 +264,24 @@ def parseGitLogData(stream, options):
   return authorstats
 
 
-def gitStats(log_args, options):
+def gitStats(log_args, options, path=None):
+  if path:
+    old_path = os.getcwd()
+    os.chdir(path)
   cmd = ['git', 'log', '--numstat', '--pretty=format:+%an <%ae>']
   cmd.extend(log_args)
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-  return parseGitLogData(proc.stdout, options)
+  if path:
+    os.chdir(old_path)
+  return parseGitLogData(proc.stdout, options, path)
+
+
+def gitStatsAggregated(log_args, options):
+  if options.repos:
+    return reduce(operator.add,
+        [gitStats(log_args, options, r) for r in options.repos])
+  else:
+    return gitStats(log_args, options)
 
 
 def parseArgs():
@@ -254,6 +292,9 @@ def parseArgs():
                     help='include files matching PATTERN')
   parser.add_option('-o', '--order', dest='order', metavar='ORDER',
                     help='sorting order (e.g., +delta)')
+  parser.add_option('-r', '--repo', dest='repos', metavar='REPO',
+                    action='append',
+                    help='repository path, can be specified multiple times')
   options, args = parser.parse_args()
 
   # Validate sorting field.
@@ -270,7 +311,7 @@ def parseArgs():
 
 def main():
   options, log_args = parseArgs()
-  stats = gitStats(log_args, options)
+  stats = gitStatsAggregated(log_args, options)
   if options.order:
     stats.order(options.order)
 
