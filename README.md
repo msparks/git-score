@@ -34,6 +34,10 @@ It takes the following arguments directly:
       <field> must be one of: author, files, commits, delta, added, removed
       All fields (except author) default to descending.
 
+    -r, --repo=<path>
+      Specify a path to the git repository.  Can be specified multiple times to
+      aggregate stats across multiple repositories.
+
     -h, --help
       Shows available options.
 
