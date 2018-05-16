@@ -323,6 +323,15 @@ def main():
   author_length = max([len(a) for a in stats])
   author_length = min(author_length, MAX_NAME_LENGTH)
 
+  totals = {
+    'name': '%s%s' % ('all', ' ' * (author_length - 3)),
+    'commits': 0,
+    'files': 0,
+    'delta': 0,
+    'added': 0,
+    'removed': 0,
+  }
+
   print 'author%s\tcommits\tfiles\tdelta\t(+)\t(-)' % (' ' * (author_length-6))
   for author in stats:
     name_field = author[0:author_length]
@@ -334,8 +343,20 @@ def main():
               'added': GitColor.green(stats[author].added()),
               'removed': GitColor.red(stats[author].removed()) }
 
+    totals['commits'] += stats[author].commits()
+    totals['files'] += stats[author].numFilesChanged()
+    totals['delta'] += stats[author].delta()
+    totals['added'] += stats[author].added()
+    totals['removed'] += stats[author].removed()
+
     print '%(name)s\t%(commits)d\t%(files)d' % values,
     print '\t%(delta)d\t%(added)s\t%(removed)s' % values
+
+  totals['added'] = GitColor.green(totals['added'])
+  totals['removed'] = GitColor.green(totals['removed'])
+
+  print '%(name)s\t%(commits)d\t%(files)d' % totals,
+  print '\t%(delta)d\t%(added)s\t%(removed)s' % totals
 
 
 if __name__ == '__main__':
