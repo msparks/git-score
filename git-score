@@ -268,7 +268,7 @@ def gitStats(log_args, options, path=None):
   if path:
     old_path = os.getcwd()
     os.chdir(path)
-  cmd = ['git', 'log', '--numstat', '--pretty=format:+%an <%ae>']
+  cmd = ['git', 'log', '--use-mailmap', '--numstat', '--pretty=format:+%aN <%ae>']
   cmd.extend(log_args)
   proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
   if path:
